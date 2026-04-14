@@ -20,14 +20,16 @@ export default async function ThreadPage({ params, searchParams }: Props) {
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
 
   const supabase = await createClient();
-  const authUser = await getAuthUser();
 
-  // Find the profile by username
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, username")
-    .eq("username", username)
-    .single();
+  // Fetch auth user and profile by username in parallel
+  const [authUser, { data: profile }] = await Promise.all([
+    getAuthUser(),
+    supabase
+      .from("profiles")
+      .select("id, username")
+      .eq("username", username)
+      .single()
+  ]);
 
   if (!profile) notFound();
 
@@ -42,30 +44,33 @@ export default async function ThreadPage({ params, searchParams }: Props) {
   if (!thread) notFound();
 
   // If thread is private and user is not the owner, show 404
-  if (!thread.is_public && authUser?.user.id !== thread.owner_id) {
+  if (!thread.is_public && authUser?.user?.id !== thread.owner_id) {
     notFound();
   }
 
-  const isOwner = authUser?.user.id === thread.owner_id;
+  const isOwner = authUser?.user?.id === thread.owner_id;
 
-  // Get total message count for pagination
-  const { count: totalCount } = await supabase
-    .from("messages")
-    .select("*", { count: "exact", head: true })
-    .eq("thread_id", thread.id);
-
-  const totalPages = Math.max(1, Math.ceil((totalCount ?? 0) / MESSAGES_PER_PAGE));
-
-  // Fetch paginated messages with replies
   const from = (currentPage - 1) * MESSAGES_PER_PAGE;
   const to = from + MESSAGES_PER_PAGE - 1;
 
-  const { data: messages } = await supabase
-    .from("messages")
-    .select("*, replies(*)")
-    .eq("thread_id", thread.id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  // Get total message count and messages in parallel
+  const [
+    { count: totalCount },
+    { data: messages }
+  ] = await Promise.all([
+    supabase
+      .from("messages")
+      .select("*", { count: "exact", head: true })
+      .eq("thread_id", thread.id),
+    supabase
+      .from("messages")
+      .select("*, replies(*)")
+      .eq("thread_id", thread.id)
+      .order("created_at", { ascending: false })
+      .range(from, to)
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil((totalCount ?? 0) / MESSAGES_PER_PAGE));
 
   const messagesWithReplies: MessageWithReplies[] = (messages ?? []).map(
     (m) => ({

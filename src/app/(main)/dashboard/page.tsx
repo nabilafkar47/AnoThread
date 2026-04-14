@@ -25,24 +25,27 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   const supabase = await createClient();
 
-  // Get total count for pagination
-  const { count: totalCount } = await supabase
-    .from("threads")
-    .select("*", { count: "exact", head: true })
-    .eq("owner_id", authUser.user.id);
-
-  const totalPages = Math.max(1, Math.ceil((totalCount ?? 0) / THREADS_PER_PAGE));
-
-  // Fetch paginated threads
+  // Fetch paginated threads and total count in parallel
   const from = (currentPage - 1) * THREADS_PER_PAGE;
   const to = from + THREADS_PER_PAGE - 1;
 
-  const { data: threads } = await supabase
-    .from("threads")
-    .select("*, messages(count)")
-    .eq("owner_id", authUser.user.id)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  const [
+    { count: totalCount },
+    { data: threads }
+  ] = await Promise.all([
+    supabase
+      .from("threads")
+      .select("*", { count: "exact", head: true })
+      .eq("owner_id", authUser.user.id),
+    supabase
+      .from("threads")
+      .select("*, messages(count)")
+      .eq("owner_id", authUser.user.id)
+      .order("created_at", { ascending: false })
+      .range(from, to)
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil((totalCount ?? 0) / THREADS_PER_PAGE));
 
   const threadCards: ThreadCardData[] = (threads ?? []).map((t) => ({
     id: t.id,
