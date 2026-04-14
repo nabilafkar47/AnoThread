@@ -26,7 +26,7 @@ const EXAMPLE_QUESTIONS_ROW2 = [
 function QuestionCard({ question }: { question: string }) {
   return (
     <Card className="w-[280px] shrink-0">
-      <CardContent className="p-4">
+      <CardContent>
         <p className="text-sm text-muted-foreground leading-relaxed">
           &ldquo;{question}&rdquo;
         </p>
