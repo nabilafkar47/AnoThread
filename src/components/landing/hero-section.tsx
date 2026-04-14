@@ -5,7 +5,7 @@ export function HeroSection() {
   return (
     <section className="mx-auto max-w-5xl px-6 py-14">
       <div className="flex flex-col gap-4 sm:gap-6 text-center items-center">
-        <h1 className="text-3xl sm:text-5xl font-bold tracking-tight">
+        <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight">
           Ask me anything, <br />
           anonymously 🤫
         </h1>
