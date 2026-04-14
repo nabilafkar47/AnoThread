@@ -151,7 +151,7 @@ export async function createMessage(threadId: string, content: string) {
     return { error: error.message };
   }
 
-  revalidatePath("/");
+  revalidatePath("/[username]/[threadId]", "page");
   return { success: true };
 }
 
@@ -173,23 +173,14 @@ export async function createReply(messageId: string, content: string) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    // Get the message's thread, then check if current user is the thread owner
     const { data: message } = await supabase
       .from("messages")
-      .select("thread_id")
+      .select("thread_id, threads(owner_id)")
       .eq("id", messageId)
       .single();
 
-    if (message) {
-      const { data: thread } = await supabase
-        .from("threads")
-        .select("owner_id")
-        .eq("id", message.thread_id)
-        .single();
-
-      if (thread && thread.owner_id === user.id) {
-        isOwner = true;
-      }
+    if (message && (message.threads as unknown as { owner_id: string } | null)?.owner_id === user.id) {
+      isOwner = true;
     }
   }
 
@@ -203,7 +194,7 @@ export async function createReply(messageId: string, content: string) {
     return { error: error.message };
   }
 
-  revalidatePath("/");
+  revalidatePath("/[username]/[threadId]", "page");
   return { success: true };
 }
 
